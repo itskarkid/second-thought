@@ -1,0 +1,3 @@
+Flask>=3.0,<4
+requests>=2.31,<3
+opf @ git+https://github.com/openai/privacy-filter.git@f7f00ca7fb869683eb732c010299d901457f19c3

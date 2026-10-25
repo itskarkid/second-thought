@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local Chat</title>
+  <style>
+    :root { --ink: #242b29; --muted: #606b66; --line: #d8dfdb; --green: #17664b; --paper: #fafcfb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; height: 100dvh; display: flex; flex-direction: column; color: var(--ink); background: var(--paper); font: 16px/1.55 "Segoe UI", sans-serif; letter-spacing: 0; }
+    button, input, textarea { font: inherit; }
+    button { cursor: pointer; border: 1px solid var(--line); border-radius: 6px; padding: 9px 16px; background: white; color: var(--ink); }
+    button:disabled { cursor: wait; opacity: .55; }
+    button:hover:not(:disabled) { border-color: var(--green); }
+    :focus-visible { outline: 3px solid #3c9276; outline-offset: 3px; }
+    header { flex-shrink: 0; border-bottom: 1px solid var(--line); background: white; }
+    .bar { max-width: 1000px; margin: auto; padding: 18px 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .brand { margin-right: auto; }
+    h1 { font: 600 24px/1.2 Georgia, serif; margin: 0; }
+    .eyebrow { color: var(--muted); font-size: 12px; }
+    .privacy { display: flex; align-items: center; gap: 9px; font-size: 14px; cursor: pointer; }
+    .privacy input { appearance: none; width: 38px; height: 22px; border-radius: 12px; background: #89938e; margin: 0; position: relative; cursor: pointer; }
+    .privacy input:checked { background: var(--green); }
+    .privacy input::after { content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%; top: 3px; left: 3px; background: white; transition: transform .15s; }
+    .privacy input:checked::after { transform: translateX(16px); }
+    main { width: 100%; max-width: 840px; min-height: 0; flex: 1; display: flex; flex-direction: column; margin: 0 auto; padding: 28px 24px; }
+    .settings { flex-shrink: 0; display: flex; align-items: center; gap: 12px; margin-bottom: 24px; font-size: 13px; color: var(--muted); }
+    #model { width: 200px; max-width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 4px; background: white; }
+    #status { margin-left: auto; text-align: right; }
+    #conversation { flex: 1; min-height: 0; overflow-y: auto; }
+    .empty { padding: 64px 0; text-align: center; }
+    .empty h2 { font: 400 30px Georgia, serif; margin: 0 0 10px; }
+    .empty p { color: var(--muted); font-size: 14px; }
+    .message { padding: 18px 0; border-top: 1px solid var(--line); animation: arrive .18s ease-out; }
+    .message strong { font-size: 12px; color: var(--green); }
+    .message p { margin: 7px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    #composer { flex-shrink: 0; max-height: 50dvh; overflow-y: auto; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+    textarea, #preview { display: block; width: 100%; height: clamp(140px, 24dvh, 220px); min-height: 140px; overflow-y: auto; padding: 14px; border: 1px solid #aab9b0; border-radius: 6px; background: white; color: var(--ink); font-size: 16px; line-height: 2.1; }
+    textarea { resize: none; }
+    .actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
+    .primary { background: var(--green); color: white; border-color: var(--green); }
+    .caption { margin-right: auto; font-size: 12px; color: var(--muted); }
+    #error { flex-shrink: 0; margin: 8px 0 0; color: #a42b35; font-size: 14px; }
+    #error:empty { display: none; }
+    #mask-count { font-size: 12px; color: var(--muted); }
+    .comparison { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .comparison section { min-width: 0; }
+    .comparison section:first-child { padding-right: 24px; }
+    .comparison section + section { padding-left: 24px; border-left: 1px solid var(--line); }
+    .comparison h2, .comparison label { display: block; min-height: 38px; margin: 0 0 12px; font-size: 12px; font-weight: 600; color: var(--muted); overflow-wrap: anywhere; }
+    #outgoing-section[hidden] { display: none; }
+    #composer.privacy-off .comparison { grid-template-columns: minmax(0, 1fr); }
+    #composer.privacy-off .comparison section:first-child { padding-right: 0; }
+    #preview { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .token { display: inline; padding: 2px 1px; border: 0; border-radius: 2px; background: transparent; line-height: inherit; overflow-wrap: anywhere; }
+    .token.suggested { background: #fff0b8; box-shadow: inset 0 -2px #d2ad37; }
+    .token.masked { background: #e1ede8; color: #175b44; box-shadow: inset 0 -2px #4d977c; }
+    .token:hover { background: #e5e9e7; }
+    @media (max-width: 640px) { .comparison section:first-child { padding-right: 10px; } .comparison section + section { padding-left: 10px; } textarea, #preview { padding: 10px; } }
+    @keyframes arrive { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+    @media (max-width: 540px) { .bar, main { padding: 18px 16px; } .brand { flex-basis: 100%; } .settings { flex-wrap: wrap; } #status { width: 100%; text-align: left; margin: 0; } .empty { padding: 35px 0; } }
+  </style>
+</head>
+<body>
+  <header><div class="bar">
+    <div class="brand"><h1>Local Chat</h1><span class="eyebrow">OLLAMA / PRIVATE WORKSPACE</span></div>
+    <label class="privacy"><input id="privacy" type="checkbox" role="switch" checked>Privacy review</label>
+    <button id="clear" type="button">New chat</button>
+  </div></header>
+  <main>
+    <div class="settings">
+      <label for="model">Model</label><input id="model" value="llama3.2:3b" spellcheck="false" required>
+      <span id="status" role="status">Ready</span>
+    </div>
+    <div id="conversation" role="log" aria-label="Chat messages" aria-live="polite">
+      <div class="empty" id="empty"><h2>What is on your mind?</h2><p>A conversation with your local model.</p></div>
+    </div>
+    <form id="composer">
+      <div class="comparison">
+        <section aria-labelledby="original-title">
+          <label id="original-title" for="prompt">INPUT</label>
+          <textarea id="prompt" placeholder="Write a message..." required></textarea>
+        </section>
+        <section id="outgoing-section" aria-labelledby="outgoing-title">
+          <h2 id="outgoing-title">MESSAGE TO OLLAMA</h2>
+          <div id="preview" aria-live="polite"></div>
+        </section>
+      </div>
+      <div class="actions"><span class="caption" id="detection-status" role="status"></span><button id="retry-detection" type="button" hidden>Retry detection</button><span id="mask-count" aria-live="polite">0 masked</span><button id="submit" type="submit" class="primary">Send</button></div>
+    </form>
+    <p id="error" role="alert"></p>
+  </main>
+  <script src="{{ url_for('static', filename='chat.js') }}"></script>
+</body>
+</html>
